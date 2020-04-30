@@ -37,9 +37,9 @@ def getListOfFiles(dirName):
             allFiles.append(fullPath)
 
     return allFiles
-dirName = '/Users/georgedamoulakis/PycharmProjects/Droplets/2_Images/for_MOHA/Initial';
+dirName = '/Users/georgedamoulakis/PycharmProjects/Condensation/2_Images/for_MOHA/Initial';
 listOfFiles = getListOfFiles(dirName)
-dirName2 = '/Users/georgedamoulakis/PycharmProjects/Droplets/2_Images/for_MOHA/afterGamma';
+dirName2 = '/Users/georgedamoulakis/PycharmProjects/Condensation/2_Images/for_MOHA/afterGamma';
 listOfFiles2 = getListOfFiles(dirName2)
 A_to_be: ndarray = np.empty(((len(listOfFiles)),(len(listOfFiles))),dtype=object)
 
