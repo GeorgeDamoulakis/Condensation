@@ -36,7 +36,7 @@ def getListOfFiles(dirName):
             allFiles.append(fullPath)
 
     return allFiles
-dirName = '/Users/georgedamoulakis/PycharmProjects/Droplets/3_csv/csv_practise_10_images';
+dirName = '/Users/georgedamoulakis/PycharmProjects/Condensation/3_csvORtxt/csv_practise_10_images';
 listOfFiles = getListOfFiles(dirName)
 listOfFiles.sort()
 L = ( len(listOfFiles) - 1)
