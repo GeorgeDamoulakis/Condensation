@@ -2,6 +2,7 @@ import numpy as np
 import time
 import os
 from numpy import genfromtxt
+import pandas as pd
 
 ################## start the timer #######################
 start_time = time.time()
@@ -115,6 +116,10 @@ the_real_MatrixA[0][2] = round((np.mean( c3 )), 3)
 print('-----------------------')
 print('The real matrix A is:')
 print(the_real_MatrixA)
+
+my_df_1 = pd.DataFrame( the_real_MatrixA  )
+my_df_1.columns = ['0', '1', '2']
+my_df_1.to_csv(f'The real Matrix A.csv', index=False)  # save as csv
 
 
 ################## kill the timer #######################
