@@ -289,7 +289,7 @@ for i in range(len(listOfFiles)):
     #np.savetxt(f'matrix from {i} frame', (create_Matrix(im_initial, im_in)[0]), newline=" ")
 
     my_df_1 = pd.DataFrame((create_Matrix(im_initial, im_in)[0]))
-    my_df_1.columns =  ['X-Centroid', 'Y-Centroid', 'Radius', 'Total # Droplets', 'Unoccupied Area']
+    my_df_1.columns =  ['0', '1', '2', '3', '4']
     my_df_1.to_csv(f'matrix from {i} frame.csv', index=False)  # save as csv
 
 
