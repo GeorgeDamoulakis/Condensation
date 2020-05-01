@@ -15,7 +15,7 @@ from os.path import isfile, join
 
 # Read the Original image
 
-im_in = cv2.imread("/Users/georgedamoulakis/PycharmProjects/Droplets/split.jpg");
+im_in = cv2.imread("/Users/georgedamoulakis/PycharmProjects/Droplets/2_Images/split.jpg");
 h, w = im_in.shape[:2]
 
 white = np.zeros([h + 300, w + 300, 3], dtype=np.uint8)
@@ -28,7 +28,7 @@ for i in range(1, h, 1):
 im_in1 = white
 
 # Read the image to do modification
-im_in = cv2.imread('/Users/georgedamoulakis/PycharmProjects/Droplets/working/new input for drops.jpg');
+im_in = cv2.imread('/Users/georgedamoulakis/PycharmProjects/Droplets/2_Images/new input for drops.jpg');
 h, w = im_in.shape[:2]
 
 white = np.zeros([h + 300, w + 300, 3], dtype=np.uint8)

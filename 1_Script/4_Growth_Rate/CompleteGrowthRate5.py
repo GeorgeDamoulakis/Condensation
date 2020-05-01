@@ -10,7 +10,7 @@ M1 = np.array((
 [500, 500, 24]), float)
 
 M2 = np.array((
-[100, 2200, 45], #remain
+[100, 2200, 90], #remain
 [300, 400, 24], #remain
 [8 ,8 ,86],     #collision
 [500, 500, 24], #remain
@@ -52,7 +52,7 @@ def G_Rate_function(M1, M2):
         for j in range((M2_2col.shape[0])):
             d = distance(M1_2col[i][0], M1_2col[i][1], M2_2col[j][0], M2_2col[j][1])
             distances_stored[i][j] = round(d, 2)
-    # print(distances_stored)
+    print(distances_stored)
     mini = np.empty((M1_2col.shape[0], M2_2col.shape[0]), dtype=object)
     for i in range(M1_2col.shape[0]):
         for j in range((M2_2col.shape[0])):
@@ -60,7 +60,7 @@ def G_Rate_function(M1, M2):
                 mini[i, j] = distances_stored[i, j]
             else:
                 mini[i, j] = -1
-    # print(mini)
+    print(mini)
     G_Rate_matrix = np.empty((M1.shape[0], 1), dtype=object)
     for i in range(M1_2col.shape[0]):
         for j in range((M2_2col.shape[0])):
@@ -70,11 +70,11 @@ def G_Rate_function(M1, M2):
                 G_Rate_matrix[i] = abs(
                     (M2[j][2] - M1[i][2]) / (M1[j][2])
                 )
-    # print(G_Rate_matrix)
+    print(G_Rate_matrix)
     G_Rate_M_no0 = (G_Rate_matrix == 0).sum(1)
     G_Rate_matrix_clean = G_Rate_matrix[G_Rate_M_no0 == 0, :]
     G_Rate = round((np.mean(G_Rate_matrix_clean)), 3)
-    #print(f'the total rate is: ', G_Rate)
+    print(f'the total rate is: ', G_Rate)
     return G_Rate
 
 a = G_Rate_function(M1,M2)

@@ -51,12 +51,11 @@ def CountingCC():
     droplet_counter = 0
     Not_Droplet = np.empty(nlabels, dtype=object)
     for i in range(nlabels):
-        d = ((horizontal[i] + vertical[i]) / 2)
-        d1 = 0.785 * d * d
-        if abs(area[i] - (d1)) > 2500 or\
-                horizontal[i] < 5 or \
-                vertical[i] < 5 or \
-                abs(horizontal[i] - vertical[i]) < 0 :
+        d3 = ((horizontal[i] + vertical[i]) / 2)
+        p = d3 * 3.14 # the perimeter
+        circularity = 4 * (3.14) * ((area[i]) / (p ** 2))
+        print(circularity)
+        if circularity < 0.85 :
             Not_Droplet[i] = "NOT a droplet"
         else:
             Not_Droplet[i] = "ok"
@@ -103,8 +102,9 @@ def CountingCC():
     for i in range(nlabels):
         d3 = ((horizontal[i] + vertical[i]) / 2)
         d4 = 0.785 * d3 * d3
-        if abs(area[i] - (d4)) < 0 or horizontal[i] < 0 or \
-                vertical[i] < 0 or abs(horizontal[i] - vertical[i] > 0):
+        p = d3 * 3.14 # the perimeter
+        circularity = 4 * (3.14) * ((area[i]) / (p ** 2))
+        if circularity < 0.1:
             pass
         else:
             droplet_counter_2 = droplet_counter_2 + 1

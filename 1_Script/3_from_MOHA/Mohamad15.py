@@ -7,12 +7,52 @@ import pandas as pd
 from os import listdir
 from os.path import isfile, join
 
+############## I   N    F   O ##########################
+# =======================================================
+# new image
+#
+# =======================================================
+
 # Read image
-im_in = cv2.imread('/Users/georgedamoulakis/PycharmProjects/Condensation/2_Images/for_MOHA/afterGamma/0.jpg',
-                   cv2.IMREAD_GRAYSCALE);
+
+im_in = cv2.imread('image_16050.jpg');
+h,w=im_in.shape[:2]
+
+white = np.zeros([h+300,w+300,3],dtype=np.uint8)
+white.fill(255)
+# or img[:] = 255
+# cv2.imshow('3 Channel Window', white)
+for i in range(1,h,1) :
+    for j in range(1,w,1):
+        white[i+150,j+150]=im_in[i,j]
+im_in1=white
+Original=white.copy()
 
 
-def CountingCC():
+
+# Read the image to do modification
+im_in = cv2.imread('16050-gamma-sharp.jpg');
+h,w=im_in.shape[:2]
+
+white = np.zeros([h+300,w+300,3],dtype=np.uint8)
+white.fill(255)
+# cv2.imshow('3 Channel Window', white)
+for i in range(1,h,1) :
+    for j in range(1,w,1):
+        white[i+150,j+150]=im_in[i,j]
+
+
+
+
+
+
+
+
+# Read image
+im_in=white
+im_in=cv2.cvtColor(im_in, cv2.COLOR_BGR2GRAY)
+
+def CountingCC(im_in):
     # Threshold, Set values equal to or above 220 to 0, Set values below 220 to 255.
     # asjust the thresh -- important first step
     th, im_th = cv2.threshold(im_in, 50, 150, cv2.THRESH_BINARY_INV);
@@ -117,21 +157,32 @@ def CountingCC():
     #    f' // The droplets measured here are : {droplet_counter_2}')
 
     # here we draw the circles, the boxes and the numbers
+    XCENTER=[]
+    r=[]
+    
+    YCENTER=[]
     image = components
+    i=0
     out = image.copy()
     for row in range(1, nlabels, 1):
         for column in range(5):
             if Not_Droplet[row] == "ok":
-                # print(Not_Droplet[row])
-                cv2.rectangle(out, (x_centr[row] - 3, y_centr[row] - 3), (x_centr[row] + 3, y_centr[row] + 3),
-                              (0, 0, 0))
-                r = (math.sqrt(NEW_dimensions[row][5] * 0.31830988618) * 0.5)
-                cv2.circle(out, (x_centr[row], y_centr[row]), int(r), (255, 255, 0, 4))
-                cv2.putText(out, ('%d' % (row + 1)), (x_centr[row], y_centr[row]), cv2.FONT_HERSHEY_SIMPLEX, 0.8,
-                            (255, 255, 255), 2)
+                #print(Not_Droplet[row])
+                XCENTER.append((int(x_centr[row])))
+                YCENTER.append((int(y_centr[row])))
+                X=XCENTER[i]
+                Y=YCENTER[i]
+                cv2.rectangle(out, (int(X) - 3, int(Y) - 3), (int(X) + 3, int(Y)+ 3), (0, 0, 0))
+                r.append((math.sqrt(NEW_dimensions[row][5] * 0.31830988618) * 0.5))
+                P=r[i]
+                cv2.circle(out, (int(X), int(Y)), int(P), (255, 255, 0, 4))
+                cv2.putText(out, ('%d' % (row + 1)), (int(X),int(Y)), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
+                i=i+1
             else:
                 pass
+        
         column = column + 1
+        
     row = row + 1
     cv2.putText(out, ('%d droplets' % droplet_counter), (5, 30), cv2.FONT_ITALIC, 1.2, (220, 220, 220), 2)
 
@@ -154,10 +205,128 @@ def CountingCC():
     row = row + 1
 
     # show the images
-    cv2.imshow("Initial", im_in)
+    # cv2.imshow("Initial", im_in)
     cv2.imshow("Final", out)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
+    return r,XCENTER,YCENTER,out
+# CountingCC()
 
-CountingCC()
+
+
+
+
+
+
+
+
+
+
+r,x_centr,y_centr,output=CountingCC(im_in)
+U=int(len(r)/5)
+R=np.zeros(U)
+X=np.zeros(U)
+Y=np.zeros(U)
+New_Cx=np.zeros(U)
+New_Cy=np.zeros(U)
+Radii= np.zeros(U)
+
+
+
+
+
+
+
+for i in range(0,U):
+    R[i]=r[(i*5) +1]
+    X[i]=x_centr[(i*5) +1]
+    Y[i]=y_centr[(i*5) +1]
+
+
+
+
+
+
+
+for t in range(0, U):
+# the actual CircleNO is i+1
+    CircleNO= t 
+    if int(R[CircleNO]) <10 :
+        RR=int(R[CircleNO])+15
+    elif int(R[CircleNO]) <70 and int(R[CircleNO]) >10 :
+        RR=int(R[CircleNO])+20
+    else:
+        RR=int(R[CircleNO])+40  
+    x=int(X[CircleNO])
+    y=int(Y[CircleNO])
+
+    crop_img =  im_in1[y-RR:y+RR ,x-RR:x+RR]
+    # cv2.imwrite("circleNO {0}.png".format(i),crop_img)
+    
+    
+    #Hough Circle Detection
+    crop_img = cv2.cvtColor(crop_img,cv2.COLOR_BGR2GRAY)
+    # kernel = np.ones((5,5),'uint8')
+    # crop_img = cv2.erode(crop_img,kernel,iterations=1)
+    # kernel = np.ones((2,2),'uint8')
+    # crop_img = cv2.dilate(crop_img,kernel,iterations=1)
+    crop_img = cv2.GaussianBlur(crop_img,(5,5),0) 
+    cimg = cv2.cvtColor(crop_img,cv2.COLOR_GRAY2BGR)
+    circles = cv2.HoughCircles(crop_img,cv2.HOUGH_GRADIENT,1.1,1000,
+                        param1=20,param2=20,minRadius=1,maxRadius=600)
+    circles = np.uint16(np.around(circles))
+    j=0
+    RMAX=0
+    FR=np.zeros(len(circles[0]))
+
+    for i in circles[0,:]:
+        if len(circles[0]) >=1:
+            FR[j]=int(i[2])
+            if FR[j]> RMAX:
+                RMAX=FR[j]
+                Radii[t]=RMAX
+                New_Cx[t]=x-RR+i[0]
+                New_Cy[t]=y-RR+i[1]
+                j=j+1
+    
+    
+    
+  
+for i in range(0,len(Radii)):
+# draw the outer circle
+    NCY=New_Cy[i]
+    NCX=New_Cx[i]
+    RDI=Radii[i]
+    cv2.circle(im_in1,(int(NCX),int(NCY) ),int(RDI),(0,255,0),2)
+# draw the center of the circle
+    cv2.circle(im_in1,(int(NCX),int(NCY)),2,(0,0,255),2)
+
+# cv2.imshow("output", output)
+im_in1 = cv2.resize(im_in1, (0,0), fx=0.8, fy=0.8)
+Original = cv2.resize(Original, (0,0), fx=0.8, fy=0.8)
+cv2.imshow("FinalCircles",im_in1)
+cv2.imshow("Original",Original)
+cv2.imshow("output",output)
+cv2.imwrite("FinalCircles16050.png",im_in1)
+
+# fig = plt.figure(figsize = (50, 25))
+# plt.subplot(121)
+# plt.axis('off')
+# plt.imshow(Original, cmap = 'jet')
+# # plt.imshow(localMax, cmap = 'gray')
+# plt.subplot(122)
+# plt.axis('off')
+# plt.imshow(im_in1, cmap = 'jet')
+
+# plt.savefig("sidebyside.png", dpi=200, facecolor='w', edgecolor=None, orientation='portrait', 
+#             papertype=None, format='png',transparent=False, 
+#             bbox_inches=None, pad_inches=10, frameon=None, metadata=None)
+
+#Stacking and Saving
+X = np.column_stack((New_Cx,New_Cy,Radii))
+np.savetxt("CentroidsAndRadii.csv", X, delimiter=",")
+
+cv2.waitKey(0)
+cv2.destroyAllWindows()
+
