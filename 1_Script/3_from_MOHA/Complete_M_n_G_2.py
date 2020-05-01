@@ -158,12 +158,15 @@ def AccurateDropletSize(U):
         circles = cv2.HoughCircles(crop_img, cv2.HOUGH_GRADIENT, 1.1, 1000, param1=20, param2=20, minRadius=1,
                                    maxRadius=600)
         circles = np.uint16(np.around(circles))
+
         j = 0
         RMAX = 0
         FR = np.zeros(len(circles[0]))
+        CIRC = np.zeros(len(circles[0]), dtype=object)
+        CIRC = circles
 
-        for i in circles[0, :]:
-            if len(circles[0]) >= 1:
+        for i in CIRC[0, :]:
+            if len(CIRC[0]) >= 1:
                 FR[j] = int(i[2])
                 if FR[j] > RMAX:
                     RMAX = FR[j]
