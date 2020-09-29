@@ -1,0 +1,20 @@
+#splits_video_every_2frames
+import cv2
+#import math
+videoFile = ("C:/Users/grdmg/.spyder-py3/adv_supernano.ts")
+imagesFolder = "C:/Users/grdmg/Desktop/solit"
+cap = cv2.VideoCapture(videoFile)
+frameRate = cap.get(5) #frame rate
+print("the frame rate is", frameRate)
+
+while(cap.isOpened()):
+    frameId = cap.get(1) #current frame number
+    ret, frame = cap.read()
+    print(frameId)
+    if (ret != True):
+        break
+    if (frameId % 2 == 0):
+        filename = imagesFolder + "/image_" +  str(int(frameId)) + ".jpg"
+        cv2.imwrite(filename, frame)
+cap.release()
+print("Done!")
