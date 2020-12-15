@@ -37,8 +37,34 @@ for y in range(image.shape[0]):
 
 ############################################### this part is Gamma fixing
 gamma_image = adjust_gamma(new_image, gamma=0.2)
-cv.imwrite("G_E_image_500.tif", gamma_image)
-cv.imshow("Initial", image)
-cv.imshow("Final", gamma_image)
+#cv.imwrite("G_E_image_500.tif", gamma_image)
+#cv.imshow("Initial", image)
+#cv.imshow("Final", gamma_image)
+#cv.waitKey(0)
+#cv.destroyAllWindows()
+
+
+############################################### this part is sobrel
+###############################################  https://docs.opencv.org/3.4/d2/d2c/tutorial_sobel_derivatives.html
+src = gamma_image
+window_name = ('Sobel Demo - Simple Edge Detector')
+scale = 1
+delta = 0
+ddepth = cv.CV_16S
+src = cv.GaussianBlur(src, (3, 3), 0)
+gray = cv.cvtColor(src, cv.COLOR_BGR2GRAY)
+grad_x = cv.Sobel(gray, ddepth, 1, 0, ksize=3, scale=scale, delta=delta, borderType=cv.BORDER_DEFAULT)
+# Gradient-Y
+# grad_y = cv.Scharr(gray,ddepth,0,1)
+grad_y = cv.Sobel(gray, ddepth, 0, 1, ksize=3, scale=scale, delta=delta, borderType=cv.BORDER_DEFAULT)
+abs_grad_x = cv.convertScaleAbs(grad_x)
+abs_grad_y = cv.convertScaleAbs(grad_y)
+grad = cv.addWeighted(abs_grad_x, 0.5, abs_grad_y, 0.5, 0)
+
+cv.imshow(window_name, grad)
 cv.waitKey(0)
-cv.destroyAllWindows()
+
+cv.imwrite("image_500.tif", image)
+cv.imwrite("E_image_500.tif", new_image)
+cv.imwrite("G_E_image_500.tif", gamma_image)
+cv.imwrite("S_G_E_image_500.tif", grad)
