@@ -1,0 +1,44 @@
+from __future__ import print_function
+from builtins import input
+import cv2 as cv
+import numpy as np
+import argparse
+
+
+def unsharp_mask(image, kernel_size=(9, 9), sigma=2.0, amount=2.0, threshold=0):
+    """Return a sharpened version of the image, using an unsharp mask."""
+    blurred = cv.GaussianBlur(image, kernel_size, sigma)
+    sharpened = float(amount + 1) * image - float(amount) * blurred
+    sharpened = np.maximum(sharpened, np.zeros(sharpened.shape))
+    sharpened = np.minimum(sharpened, 255 * np.ones(sharpened.shape))
+    sharpened = sharpened.round().astype(np.uint8)
+    if threshold > 0:
+        low_contrast_mask = np.absolute(image - blurred) < threshold
+        np.copyto(sharpened, image, where=low_contrast_mask)
+    return sharpened
+def adjust_gamma(image, gamma=3.5):
+	invGamma = 1.0 / gamma
+	table = np.array([((i / 255.0) ** invGamma) * 255
+		for i in np.arange(0, 256)]).astype("uint8")
+	return cv.LUT(image, table)
+
+image = cv.imread('C:\\SteamCondChamber\\imagesFXM24C15V25T41P1070\\image_500.tif', cv.IMREAD_COLOR)
+
+############################################### this part is from
+############################################### https://docs.opencv.org/3.4/d3/dc1/tutorial_basic_linear_transform.html
+
+new_image = np.zeros(image.shape, image.dtype)
+alpha = 1.0 # Simple contrast control
+beta = 70    # Simple brightness control
+for y in range(image.shape[0]):
+    for x in range(image.shape[1]):
+        for c in range(image.shape[2]):
+            new_image[y,x,c] = np.clip(alpha*image[y,x,c] + beta, 0, 255)
+
+############################################### this part is Gamma fixing
+gamma_image = adjust_gamma(new_image, gamma=0.2)
+cv.imwrite("G_E_image_500.tif", gamma_image)
+cv.imshow("Initial", image)
+cv.imshow("Final", gamma_image)
+cv.waitKey(0)
+cv.destroyAllWindows()
