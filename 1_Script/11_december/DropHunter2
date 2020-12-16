@@ -1,0 +1,168 @@
+import cv2 as cv
+import time
+import numpy as np
+# import math
+# import matplotlib.pyplot as plt
+# import pandas as p
+
+start_time = time.time()
+
+im_in = cv.imread('/Users/georgedamoulakis/Desktop/imagesFXM24C15V25T41P1070/4S_G_E_image_500.tif', cv.IMREAD_GRAYSCALE);
+im_in_original = cv.imread('/Users/georgedamoulakis/Desktop/imagesFXM24C15V25T41P1070/Light_image_500.tif')
+im_in_actual = cv.imread('/Users/georgedamoulakis/Desktop/imagesFXM24C15V25T41P1070/image_500.tif')
+
+########## create a white frame around the original image
+h, w = im_in_original.shape[:2]
+white = np.zeros([h + 300, w + 300, 3], dtype=np.uint8)
+white.fill(255)
+for i in range(1, h, 1):
+    for j in range(1, w, 1):
+        white[i + 150, j + 150] = im_in_original[i, j]
+
+framed_image = white
+#print('before', framed_image.shape)
+framed_image = cv.cvtColor(framed_image, cv.COLOR_BGR2GRAY)
+#print(framed_image.shape)
+
+########## create a second framed image to show
+h, w = im_in_actual.shape[:2]
+white2 = np.zeros([h + 300, w + 300, 3], dtype=np.uint8)
+white2.fill(255)
+for i in range(1, h, 1):
+    for j in range(1, w, 1):
+        white2[i + 150, j + 150] = im_in_actual[i, j]
+framed_image_actual = white2
+#print('before', framed_image.shape)
+framed_image_actual = cv.cvtColor(framed_image_actual, cv.COLOR_BGR2GRAY)
+#print(framed_image.shape)
+
+########## create a second framed image to show
+h3, w3 = im_in_actual.shape[:2]
+white3 = np.zeros([h + 300, w + 300, 3], dtype=np.uint8)
+white3.fill(255)
+white_for_show = white3
+
+########## fixing the image to go droplet hunting
+th, im_th = cv.threshold(im_in, 100, 255, cv.THRESH_BINARY_INV);
+#edges = cv.Canny(im_th, 10, 50, apertureSize=3)
+
+
+kernel = np.ones((3, 3), np.uint8)
+erosion = cv.erode(im_th, kernel, iterations=1)
+dilation = cv.dilate(erosion, kernel, iterations=1)
+
+#cv.imshow("initial", im_th)
+#cv.imshow("dilation", dilation)
+#cv.waitKey()
+#cv.destroyAllWindows()
+
+
+def CC(img):
+    nlabels, labels, stats, centroids = cv.connectedComponentsWithStats(img)
+    label_hue = np.uint8(179 * labels / np.max(labels))
+    blank_ch = 255 * np.ones_like(label_hue)
+    labeled_img = cv.merge([label_hue, blank_ch, blank_ch])
+    labeled_img = cv.cvtColor(labeled_img, cv.COLOR_HSV2BGR)
+    labeled_img[label_hue == 0] = 0
+    return labeled_img, nlabels, labels, stats, centroids
+
+components, nlabels, labels, stats, centroids = CC(dilation)
+#cv.imshow("components", components)
+#cv.waitKey()
+#cv.destroyAllWindows()
+
+#print("the objects inside there are:", nlabels)
+#print(stats)
+#print("stats.shape[0]", stats.shape)
+# stats columns =  leftmost (x) coordinate, topmost (y) coordinate, horizontal size, vertical size,  total area (in pixels)
+
+# Logic check if something is DROPLET or NOT
+final_stats = []
+final_centroids = []
+f_stat_counter = 0
+for i in range(stats.shape[0]):
+    if (stats[i][0] < 5) or (stats[i][1]< 5) or (stats[i][0] > 500) or (stats[i][1] > 500):
+        pass
+    else:
+        droplet_radius = ((stats[i][2] + stats[i][3]) / 4)
+        #print("radius", droplet_radius)
+        droplet_perimeter = 2 * 3.14 * droplet_radius
+        droplet_area = 3.14 * droplet_radius * droplet_radius
+        droplet_circularity = 4 * 3.14 * ((droplet_area) / (droplet_perimeter * droplet_perimeter))
+        #print("circ", droplet_circularity)
+        #print("--------------")
+       # if (droplet_circularity == 1) and (stats[i][4]>300):
+        if (droplet_circularity > 0.999) and (droplet_circularity < 1.00001) and (stats[i][4]>300):
+            #print("droplet #", i, "stats:", stats[i])
+            #print("circ", droplet_circularity)
+            #print("--------------")
+            final_stats.append(stats[i])
+            final_centroids.append(centroids[i])
+            f_stat_counter = f_stat_counter + 1
+
+final_stats_array = np.array(final_stats, dtype=object)
+final_centroids_array = np.array(final_centroids, dtype=object)
+
+#print("the real objects inside there are:", f_stat_counter)
+#print(final_stats_array.shape)
+print("Total droplets:", f_stat_counter)
+
+
+
+
+# here we draw the circles, the boxes and the numbers
+r = []
+XCENTER = []
+YCENTER = []
+image = components
+i = 0
+out = image.copy()
+for row in range(1, final_stats_array.shape[0], 1):
+    X = int( final_centroids_array[row][0] )
+    Y = int( final_centroids_array[row][1] )
+    R = int( ((final_stats_array[row][2] + final_stats_array[row][3]) / 4) )
+    cv.rectangle(out, (int(X) - 3, int(Y) - 3), (int(X) + 3, int(Y) + 3), (0, 0, 0))
+    cv.putText(out, ('%d' % (row + 1)), (X, Y), cv.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
+    cv.circle(out, (X,Y), R, (255, 255, 0, 4), 2)
+    #print("drop#", row,"centroids", final_centroids_array[row])
+    #print("drop#", "stats =", final_stats_array[row])
+    #print("_______________________________________")
+    crop_img = framed_image[
+        int(final_centroids_array[row][1] - (R + 30)+150):int(final_centroids_array[row][1] + (R+30)+150),
+               int(final_centroids_array[row][0] - (R + 30)+150):int(final_centroids_array[row][0] + (R + 30)+150)
+    ]
+    #print(crop_img.shape)
+    crop_img = cv.medianBlur(crop_img, 5)
+    cimg = cv.cvtColor(crop_img, cv.COLOR_GRAY2BGR)
+
+    circles = cv.HoughCircles(crop_img, cv.HOUGH_GRADIENT, 1, 100, param1=50, param2=10, minRadius=10, maxRadius=0)
+    circles = np.uint16(np.around(circles))
+    for i in circles[0, :]:
+        # draw the outer circle
+        cv.circle(cimg, (i[0], i[1]), i[2], (0, 255, 0), 2)
+        # draw the center of the circle
+        cv.circle(cimg, (i[0], i[1]), 2, (0, 0, 255), 3)
+        cv.imshow('detected circles on white', cimg)
+        cv.waitKey(0)
+        cv.destroyAllWindows()
+        corr_X = int(X - (R + 30) + i[0] + 150)
+        corr_Y = int(Y - (R + 30) + i[1] + 150)
+        corr_R = int(i[2])
+        cv.circle(framed_image_actual, (corr_X, corr_Y), corr_R, (0, 255, 0), 2) #big corrected circle
+        cv.circle(framed_image_actual, (corr_X, corr_Y), 2, (0, 0, 255), 3)      #corrected circle center
+        cv.circle(white3, (corr_X, corr_Y), corr_R, (0, 255, 0), 2) #big corrected circle
+        cv.circle(white3, (corr_X, corr_Y), 2, (0, 0, 255), 3)      #corrected circle center
+
+#cv.putText(framed_image_actual, ('%d droplets' % f_stat_counter), (5, 30), cv.FONT_ITALIC, 1.2, (0, 0, 255), 2)
+#cv.imshow('components', out)
+#cv.imshow('detected circles', framed_image_actual)
+#cv.imshow('detected circles on white', white_for_show)
+#cv.waitKey(0)
+#cv.destroyAllWindows()
+
+
+
+"""
+"""
+
+print("--- %s seconds ---" % (time.time() - start_time))
