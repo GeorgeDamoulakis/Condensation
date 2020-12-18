@@ -1,0 +1,20 @@
+import cv2
+
+videoFile = ("C:\\SteamCondChamber\\FXM24C15V25T41P1070.cine")
+imagesFolder = ("C:\\SteamCondChamber\\imagesFXM24C15V25T41P1070")
+
+cap = cv2.VideoCapture(videoFile)
+frameRate = cap.get(5) #frame rate
+print("the frame rate is", frameRate)
+
+while(cap.isOpened()):
+    frameId = cap.get(1) #current frame number
+    ret, frame = cap.read()
+    print(frameId)
+    if (ret != True):
+        break
+    if (frameId % 500 == 0):
+        filename = imagesFolder + "/image_" +  str(int(frameId)) + ".tif"
+        cv2.imwrite(filename, frame)
+cap.release()
+print("Done!")
