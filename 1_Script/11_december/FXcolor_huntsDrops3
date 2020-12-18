@@ -1,0 +1,302 @@
+import cv2 as cv
+import time
+import numpy as np
+import pandas as pd
+
+# -------------------------- read the image -------------------------- #
+im_in_actual = cv.imread('/Users/georgedamoulakis/Desktop/imagesFXM24C15V25T41P1070/image_500.tif')
+frame_rate = 500
+
+# -------------------------- start the timer -------------------------- #
+start_time = time.time()
+# -------------------------- 1st step - fix the colors -------------------------- #
+# -------------------------- fix the colors no.1 -------------------------- #
+new_image = np.zeros(im_in_actual.shape, im_in_actual.dtype)
+alpha = 2.5 # Simple contrast control
+beta = 10    # Simple brightness control
+for y in range(im_in_actual.shape[0]):
+    for x in range(im_in_actual.shape[1]):
+        for c in range(im_in_actual.shape[2]):
+            new_image[y,x,c] = np.clip(alpha*im_in_actual[y,x,c] + beta, 0, 255)
+new_image = cv.medianBlur(new_image, 3)
+new_image = cv.medianBlur(new_image, 5)
+new_image = cv.medianBlur(new_image, 3)
+im_in_original = new_image
+cv.imwrite(f"L_image_{frame_rate}.tif", im_in_original)
+# -------------------------- fix the colors no.2 -------------------------- #
+def unsharp_mask(image, kernel_size=(9, 9), sigma=2.0, amount=2.0, threshold=0):
+    #Return a sharpened version of the image, using an unsharp mask
+    blurred = cv.GaussianBlur(image, kernel_size, sigma)
+    sharpened = float(amount + 1) * image - float(amount) * blurred
+    sharpened = np.maximum(sharpened, np.zeros(sharpened.shape))
+    sharpened = np.minimum(sharpened, 255 * np.ones(sharpened.shape))
+    sharpened = sharpened.round().astype(np.uint8)
+    if threshold > 0:
+        low_contrast_mask = np.absolute(image - blurred) < threshold
+        np.copyto(sharpened, image, where=low_contrast_mask)
+    return sharpened
+def adjust_gamma(image, gamma=3.5):
+	invGamma = 1.0 / gamma
+	table = np.array([((i / 255.0) ** invGamma) * 255
+		for i in np.arange(0, 256)]).astype("uint8")
+	return cv.LUT(image, table)
+#this part is from
+#https://docs.opencv.org/3.4/d3/dc1/tutorial_basic_linear_transform.html
+new_image2 = np.zeros(im_in_actual.shape, im_in_actual.dtype)
+alpha = 1.0 # Simple contrast control
+beta = 70    # Simple brightness control
+for y in range(im_in_actual.shape[0]):
+    for x in range(im_in_actual.shape[1]):
+        for c in range(im_in_actual.shape[2]):
+            new_image2[y,x,c] = np.clip(alpha*im_in_actual[y,x,c] + beta, 0, 255)
+#this part is Gamma fixing
+gamma_image = adjust_gamma(new_image2, gamma=0.2)
+#cv.imwrite("G_E_image_1500.tif", gamma_image)
+#cv.imshow("Initial", image)
+#cv.imshow("Final", gamma_image)
+#cv.waitKey(0)
+#cv.destroyAllWindows()
+#this part is sobrel
+#https://docs.opencv.org/3.4/d2/d2c/tutorial_sobel_derivatives.html
+src = gamma_image
+window_name = ('Sobel Demo - Simple Edge Detector')
+scale = 1
+delta = 0
+ddepth = cv.CV_16S
+src = cv.GaussianBlur(src, (3, 3), 0)
+gray = cv.cvtColor(src, cv.COLOR_BGR2GRAY)
+grad_x = cv.Sobel(gray, ddepth, 1, 0, ksize=3, scale=scale, delta=delta, borderType=cv.BORDER_DEFAULT)
+# Gradient-Y
+# grad_y = cv.Scharr(gray,ddepth,0,1)
+grad_y = cv.Sobel(gray, ddepth, 0, 1, ksize=3, scale=scale, delta=delta, borderType=cv.BORDER_DEFAULT)
+abs_grad_x = cv.convertScaleAbs(grad_x)
+abs_grad_y = cv.convertScaleAbs(grad_y)
+grad = cv.addWeighted(abs_grad_x, 0.5, abs_grad_y, 0.5, 0)
+#cv.imshow(window_name, grad)
+#cv.waitKey(0)
+#cv.imwrite("image_1500.tif", image)
+#cv.imwrite("E_image_1500.tif", new_image)
+#cv.imwrite("G_E_image_1500.tif", gamma_image)
+cv.imwrite(f"S_G_E_image_{frame_rate}.tif", grad)
+im_in = grad
+# -------------------------- check if the colors work -------------------------- #
+#cv.imshow("original", im_in_actual )
+#cv.imshow("light", im_in_original )
+#cv.imshow("sobel", im_in )
+#cv.waitKey(0)
+#cv.destroyAllWindows()
+# -------------------------- 2nd step - drop hunting -------------------------- #
+print("1st step - DONE")
+# -------------------------- create white frames  -------------------------- #
+# create a white frame around the original image
+h, w = im_in_original.shape[:2]
+white = np.zeros([h + 300, w + 300, 3], dtype=np.uint8)
+white.fill(255)
+for i in range(1, h, 1):
+    for j in range(1, w, 1):
+        white[i + 150, j + 150] = im_in_original[i, j]
+framed_image = white
+#print('before', framed_image.shape)
+framed_image = cv.cvtColor(framed_image, cv.COLOR_BGR2GRAY)
+#print(framed_image.shape)
+#cv.imshow("framed image", framed_image )
+#cv.waitKey(0)
+#cv.destroyAllWindows()
+# create a second framed image to show
+h, w = im_in_actual.shape[:2]
+white2 = np.zeros([h + 300, w + 300, 3], dtype=np.uint8)
+white2.fill(255)
+for i in range(1, h, 1):
+    for j in range(1, w, 1):
+        white2[i + 150, j + 150] = im_in_actual[i, j]
+framed_image_actual = white2
+#print('before', framed_image.shape)
+framed_image_actual = cv.cvtColor(framed_image_actual, cv.COLOR_BGR2GRAY)
+#print(framed_image.shape)
+# create a second framed image to show
+h3, w3 = im_in_actual.shape[:2]
+white3 = np.zeros([h + 300, w + 300, 3], dtype=np.uint8)
+white3.fill(255)
+white_for_show = white3
+# -------------------------- thresholding and erosion  -------------------------- #
+th, im_th = cv.threshold(im_in, 100, 255, cv.THRESH_BINARY_INV);
+#edges = cv.Canny(im_th, 10, 50, apertureSize=3)
+kernel = np.ones((3, 3), np.uint8)
+erosion = cv.erode(im_th, kernel, iterations=1)
+dilation = cv.dilate(erosion, kernel, iterations=1)
+#cv.imshow("initial", im_th)
+#cv.imshow("dilation", dilation)
+#cv.waitKey()
+#cv.destroyAllWindows()
+# -------------------------- Connecting components  -------------------------- #
+def CC(img):
+    nlabels, labels, stats, centroids = cv.connectedComponentsWithStats(img)
+    label_hue = np.uint8(179 * labels / np.max(labels))
+    blank_ch = 255 * np.ones_like(label_hue)
+    labeled_img = cv.merge([label_hue, blank_ch, blank_ch])
+    labeled_img = cv.cvtColor(labeled_img, cv.COLOR_HSV2BGR)
+    labeled_img[label_hue == 0] = 0
+    return labeled_img, nlabels, labels, stats, centroids
+components, nlabels, labels, stats, centroids = CC(dilation)
+#cv.imshow("components", components)
+#cv.waitKey()
+#cv.destroyAllWindows()
+#print("the objects inside there are:", nlabels)
+#print(stats)
+#print("stats.shape[0]", stats.shape)
+# stats columns =  leftmost (x) coordinate, topmost (y) coordinate, horizontal size,
+# vertical size,  total area (in pixels)
+# -------------------------- Logical tests to find droplets  -------------------------- #
+# Logic check if something is DROPLET or NOT
+final_stats = []
+final_centroids = []
+f_stat_counter = 0
+for i in range(stats.shape[0]):
+    if (stats[i][0] < 5) or (stats[i][1]< 5) or (stats[i][0] > 500) or (stats[i][1] > 500):
+        pass
+    else:
+        droplet_radius = ((stats[i][2] + stats[i][3]) / 4)
+        #print("radius", droplet_radius)
+        droplet_perimeter = 2 * 3.14 * droplet_radius
+        droplet_area = 3.14 * droplet_radius * droplet_radius
+        droplet_circularity = 4 * 3.14 * ((droplet_area) / (droplet_perimeter * droplet_perimeter))
+        #print("circ", droplet_circularity)
+        #print("--------------")
+       # if (droplet_circularity == 1) and (stats[i][4]>300):
+        if (droplet_circularity > 0.999) and (droplet_circularity < 1.00001) and (stats[i][4]>300):
+            #print("droplet #", i, "stats:", stats[i])
+            #print("circ", droplet_circularity)
+            #print("--------------")
+            final_stats.append(stats[i])
+            final_centroids.append(centroids[i])
+            f_stat_counter = f_stat_counter + 1
+final_stats_array = np.array(final_stats, dtype=object)
+final_centroids_array = np.array(final_centroids, dtype=object)
+#print("the real objects inside there are:", f_stat_counter)
+#print(final_stats_array.shape)
+#print("Total droplets:", f_stat_counter)
+# -------------------------- create components image -------------------------- #
+# here we draw the circles, the boxes and the numbers
+r = []
+XCENTER = []
+YCENTER = []
+image = components
+i = 0
+out = image.copy()
+Clean_circles = []
+X_list = []
+Y_list = []
+R_list = []
+for row in range(1, final_stats_array.shape[0], 1):
+    X = int(final_centroids_array[row][0] )
+    X_list.append(X)
+    Y = int(final_centroids_array[row][1] )
+    Y_list.append(Y)
+    R = int(((final_stats_array[row][2] + final_stats_array[row][3]) / 4) )
+    R_list.append(R)
+    cv.rectangle(out, (int(X) - 3, int(Y) - 3), (int(X) + 3, int(Y) + 3), (0, 0, 0))
+    cv.putText(out, ('%d' % (row + 1)), (X, Y), cv.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
+    cv.circle(out, (X,Y), R, (255, 255, 0, 4), 2)
+    #print("drop#", row,"centroids", final_centroids_array[row])
+    #print("drop#", "stats =", final_stats_array[row])
+    #print("_______________________________________")
+    crop_img = framed_image[
+        int(final_centroids_array[row][1] - (R + 30)+150):int(final_centroids_array[row][1] + (R+30)+150),
+               int(final_centroids_array[row][0] - (R + 30)+150):int(final_centroids_array[row][0] + (R + 30)+150)
+    ]
+    #print(crop_img.shape)
+    #cv.imshow('crop_img', crop_img)
+    #cv.waitKey(0)
+    #cv.destroyAllWindows()
+    crop_img = cv.medianBlur(crop_img, 5)
+    cimg = cv.cvtColor(crop_img, cv.COLOR_GRAY2BGR)
+    circles = cv.HoughCircles(crop_img, cv.HOUGH_GRADIENT, 1, 100, param1=50, param2=10, minRadius=10, maxRadius=0)
+
+    if circles is not None:
+        circles = np.uint16(np.around(circles))
+       #print(circles.shape)
+       #print(circles[0][0][0])
+        Clean_circles.append(circles)
+       #print(circles.shape)
+       #print(circles)
+X_array = np.array(X_list, dtype=object)
+Y_array = np.array(Y_list, dtype=object)
+R_array = np.array(R_list, dtype=object)
+Clean_circles_array = np.array(Clean_circles, dtype=object)
+#print(Clean_circles_array[0][0][0][1])
+#print(Clean_circles_array.shape
+total_circles = np.zeros( (Clean_circles_array.shape[0], Clean_circles_array.shape[3]), dtype=int)
+for i in range(Clean_circles_array.shape[0]):
+    for j in range(Clean_circles_array.shape[3]):
+        total_circles[i][j] = Clean_circles_array[i][0][0][j]
+corr_X_list = []
+corr_Y_list = []
+for i in range(total_circles.shape[0]):
+    # draw the outer circle
+    cv.circle(cimg, (total_circles[i][0], total_circles[i][1]), total_circles[i][2], (0, 255, 0), 2)
+    # draw the center of the circle
+    cv.circle(cimg, (total_circles[i][0], total_circles[i][1]), 2, (0, 0, 255), 3)
+    #cv.imshow('detected circles on white', cimg)
+    #cv.waitKey(0)
+    #cv.destroyAllWindows()
+    corr_X = int(X_array[i] - (R_array[i] + 30) + total_circles[i][0] + 150)
+    corr_X_list.append(corr_X)
+    corr_Y = int(Y_array[i] - (R_array[i] + 30) + total_circles[i][1] + 150)
+    corr_Y_list.append(corr_Y)
+    corr_R = int(total_circles[i][2])
+    #cv.circle(framed_image_actual, (corr_X, corr_Y), corr_R, (0, 255, 0), 2)  # big corrected circle
+    #cv.circle(framed_image_actual, (corr_X, corr_Y), 2, (0, 0, 255), 3)  # corrected circle center
+    #cv.circle(white3, (corr_X, corr_Y), corr_R, (0, 255, 0), 2)  # big corrected circle
+    #cv.circle(white3, (corr_X, corr_Y), 2, (0, 0, 255), 3)  # corrected circle center
+# -------------------------- show images -------------------------- #
+#cv.putText(framed_image_actual, ('%d droplets' % f_stat_counter), (5, 30), cv.FONT_ITALIC, 1.2, (0, 0, 255), 2)
+#cv.imshow('components', out)
+#cv.imshow('detected circles', framed_image_actual)
+#cv.imshow('detected circles on white', white_for_show)
+#cv.waitKey(0)
+#cv.destroyAllWindows()
+# -------------------------- find total droplet area  -------------------------- #
+TotalArea_Droplets = 0
+for i in range(total_circles.shape[0]):
+    #print(i)
+    #print(TotalArea_Droplets)
+    TotalArea_Droplets = (3.14 * total_circles[i][2] * total_circles[i][2]) + TotalArea_Droplets
+# -------------------------- creating the frames's matrix  -------------------------- #
+Matrix = np.zeros((total_circles.shape[0], 5), dtype=int)
+for row in range(total_circles.shape[0]):
+    Matrix[row][0] = corr_X_list[row] # X centroid
+    Matrix[row][1] = corr_Y_list[row] # Y centroid
+    Matrix[row][2] = total_circles[row][2] # Radius
+    Matrix[row][3] = total_circles.shape[0] # Total number of droplets
+    Matrix[row][4] = TotalArea_Droplets # Total area covered from droplets
+#print(Matrix.shape[0])
+for i in range(Matrix.shape[0]-1):
+    j = i + 1
+    #print("iteration i", i)
+    if (Matrix[j][0] > (-(Matrix[i][2] / 2) + Matrix[i][0])) and (Matrix[j][0] < ((Matrix[i][2] / 2) + Matrix[i][0])):
+        Matrix[j]=[0,0,0,0,0]
+    else:
+        pass
+Final_matrix =[]
+for i in range(Matrix.shape[0]):
+    if Matrix[i][1] == 0:
+        pass
+    else:
+        Final_matrix.append(Matrix[i])
+Final_matrix_array = np.array(Final_matrix, dtype=object)
+#print(Final_matrix_array)
+for i in range(Final_matrix_array.shape[0]):
+    cv.circle(framed_image_actual, (Final_matrix_array[i][0], Final_matrix_array[i][1]), Final_matrix_array[i][2], (0, 255, 0), 2)  # big corrected circle
+    cv.circle(framed_image_actual, (Final_matrix_array[i][0], Final_matrix_array[i][1]), 2, (0, 0, 255), 3)  # corrected circle center
+cv.putText(framed_image_actual, ('%d droplets' % f_stat_counter), (5, 30), cv.FONT_ITALIC, 1.2, (0, 0, 255), 2)
+# cv.imshow('droplets', framed_image_actual)
+#cv.waitKey(0)
+#cv.destroyAllWindows()
+cv.imwrite(f"final image for {frame_rate} frame.tif", framed_image_actual)
+my_df_1 = pd.DataFrame(Final_matrix_array)
+my_df_1.columns = ['X centroid', 'Y centroid', 'Radius', 'Total number of droplets', 'Total area covered from droplets']
+my_df_1.to_csv(f'matrix from {frame_rate} frame.csv', index=False)  # save as csv
+# -------------------------- print timer -------------------------- #
+print("--- %s seconds ---" % (time.time() - start_time))
+"""""
+"""""
